@@ -13,6 +13,10 @@ import os.path
 from os import path
 import pandas as pd
 import pickle
+import re
+import urllib.request
+import requests 
+import shutil 
 
 def generate_id_text():
   if not path.exists("ID-TEXT.csv"):
@@ -56,7 +60,7 @@ def bm25_result(Tokens,query):
   top_n = np.argpartition(bm25_scores, -5)[-5:]
   bm25_hits = [{'corpus_id': idx, 'score': bm25_scores[idx]} for idx in top_n]
   bm25_hits = sorted(bm25_hits, key=lambda x: x['score'], reverse=True)
-  print("Top-5 lexical search (BM25) hits")
+  print("Top5 BM25 Retrieval:")
   result=[]
   for hit in bm25_hits[0:5]:
       print("\t{:.3f}\t{}".format(hit['score'], url+str((ID[hit['corpus_id']]))))
@@ -87,22 +91,22 @@ def semnatic_search(query,bi_encoder,cross_encoder,top_k,ID,TEXT):
   corpus_embeddings=get_text_emb(bi_encoder).cuda()
 
   hits = util.semantic_search(question_embedding, corpus_embeddings, top_k=top_k)[0]
-  cross_inp = [[query, TEXT[hit['corpus_id']]] for hit in hits]
-  cross_scores = cross_encoder.predict(cross_inp)
-  for idx in range(len(cross_scores)):
-      hits[idx]['cross-score'] = cross_scores[idx]
+  cross_corpus = [[query, TEXT[hit['corpus_id']]] for hit in hits]
+  cross_scores = cross_encoder.predict(cross_corpus)
+  for i in range(len(cross_scores)):
+      hits[i]['cross-score'] = cross_scores[i]
   
   Tokens=tokenizer(TEXT)
   r1=bm25_result(Tokens,query)
 
-  print("Top-5 Bi-Encoder Retrieval")
+  print("Top5 Bi-Encoder Retrieval")
   hits = sorted(hits, key=lambda x: x['score'], reverse=True)
   r2=[]
   for hit in hits[0:5]:
       print("\t{:.3f}\t{}".format(hit['score'], url+str(ID[hit['corpus_id']])))
       r2.append((ID[hit['corpus_id']]))
   r3=[]
-  print("Top-5 Cross-Encoder Re-ranker")
+  print("Top5 Cross-Encoder Re-ranker Retrieval")
   hits = sorted(hits, key=lambda x: x['cross-score'], reverse=True)
   for hit in hits[0:5]:
       print("\t{:.3f}\t{}".format(hit['cross-score'], url+str(ID[hit['corpus_id']])))
@@ -171,6 +175,26 @@ def evaluate(r1,r2,r3):
   print("The NDCG@5 of BM25 is: ",ndcg1)
   print("The NDCG@5 of Bi-encoder is: ",ndcg2)
   print("The NDCG@5 of Cross-Encoder Re-ranker is: ",ndcg3)
+
+def extract_image(id):
+  with urllib.request.urlopen("https://www.metmuseum.org/art/collection/search/"+id) as url:
+    s = url.read()  
+  s.decode('UTF-8')
+  s=str(s).replace('\\n',"").replace('\\r',"")
+  x = re.search("https://collectionapi.metmuseum.*\W", s)
+  x=x.group(0)
+  startIndex = x.find('\"')
+  x=x[0:startIndex]
+  image_url = x
+  filename = id+".jpg"
+  r = requests.get(image_url, stream = True)
+  if r.status_code == 200:
+      r.raw.decode_content = True
+      with open(filename,'wb') as f:
+          shutil.copyfileobj(r.raw, f)      
+      print('Image sucessfully Downloaded: ',filename)
+  else:
+      print('Image Couldn\'t be retreived')
 
 if __name__ == '__main__':
     bi_encoder = SentenceTransformer('msmarco-distilbert-base-v2')
