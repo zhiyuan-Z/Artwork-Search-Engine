@@ -3,3 +3,5 @@ rank_bm25
 torch
 scikit-learn
 tqdm
+python-terrier
+lightgbm==3.1.1
