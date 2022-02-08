@@ -1,5 +1,5 @@
 # SI650-Project: Artwork Search Engine
-This is the final project report for Umich SI650 Information Retrieval, where we implemented and improved the search engine for artworks in The Metropolitan Museum of Art.
+This is the final project report for Umich SI650 Information Retrieval, where we implemented and improved the search engine for artworks in The Metropolitan Museum of Art. You can find a more detailed description of the project [here](https://medium.com/@zhiyuanz/artwork-search-engines-learning-2-rank-and-semantic-search-a0fce87862d2)
 ## Requirements:
 The codes rely on python v3.7.
 You can install the dependencies by cd to the root directory and run `conda install -r requirements`.
